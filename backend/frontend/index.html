@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradeCopy — Cloud Trade Copier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --bg2: #111827;
+      --bg3: #1a2236;
+      --border: rgba(99,179,237,0.12);
+      --accent: #3b82f6;
+      --accent2: #06d6a0;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --green: #10b981;
+      --card-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --radius: 12px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:'Space Grotesk',sans-serif; min-height:100vh; }
+    
+    /* AUTH */
+    #auth-screen {
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background: radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(6,214,160,0.08) 0%, transparent 50%),
+                  var(--bg);
+    }
+    .auth-box {
+      width:420px; background:var(--bg2); border:1px solid var(--border);
+      border-radius:20px; padding:48px 40px; box-shadow:var(--card-shadow);
+    }
+    .auth-logo { text-align:center; margin-bottom:32px; }
+    .auth-logo h1 { font-size:28px; font-weight:700; letter-spacing:-0.5px; }
+    .auth-logo h1 span { color:var(--accent); }
+    .auth-logo p { color:var(--text2); font-size:14px; margin-top:6px; }
+    .auth-tabs { display:flex; gap:4px; background:var(--bg3); border-radius:10px; padding:4px; margin-bottom:28px; }
+    .auth-tab { flex:1; padding:8px; text-align:center; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; color:var(--text2); transition:all .2s; border:none; background:none; }
+    .auth-tab.active { background:var(--accent); color:#fff; }
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block; font-size:13px; font-weight:500; color:var(--text2); margin-bottom:6px; }
+    .form-group input { width:100%; padding:11px 14px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; font-size:14px; outline:none; transition:border-color .2s; }
+    .form-group input:focus { border-color:var(--accent); }
+    .btn-primary { width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; transition:opacity .2s; margin-top:4px; }
+    .btn-primary:hover { opacity:.85; }
+    .auth-error { color:var(--danger); font-size:13px; text-align:center; margin-top:12px; min-height:20px; }
+
+    /* APP LAYOUT */
+    #app { display:none; min-height:100vh; }
+    .sidebar {
+      position:fixed; left:0; top:0; bottom:0; width:240px;
+      background:var(--bg2); border-right:1px solid var(--border);
+      display:flex; flex-direction:column; padding:0;
+    }
+    .sidebar-logo { padding:24px 20px 20px; border-bottom:1px solid var(--border); }
+    .sidebar-logo h2 { font-size:20px; font-weight:700; letter-spacing:-0.3px; }
+    .sidebar-logo h2 span { color:var(--accent); }
+    .sidebar-logo small { font-size:11px; color:var(--text3); font-family:'JetBrains Mono',monospace; }
+    .sidebar-nav { flex:1; padding:16px 12px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
+    .nav-section-title { font-size:10px; font-weight:600; color:var(--text3); letter-spacing:1px; text-transform:uppercase; padding:12px 8px 6px; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; color:var(--text2); transition:all .15s; border:none; background:none; width:100%; text-align:left; }
+    .nav-item:hover { background:var(--bg3); color:var(--text); }
+    .nav-item.active { background:rgba(59,130,246,0.15); color:var(--accent); }
+    .nav-item .icon { font-size:16px; width:20px; text-align:center; }
+    .sidebar-bottom { padding:16px 12px; border-top:1px solid var(--border); }
+    .user-pill { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--bg3); border-radius:10px; }
+    .user-avatar { width:32px; height:32px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+    .user-info { flex:1; overflow:hidden; }
+    .user-email { font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .user-plan { font-size:11px; color:var(--accent2); font-weight:600; }
+    .btn-logout { background:none; border:none; color:var(--text3); cursor:pointer; font-size:16px; padding:4px; }
+    .btn-logout:hover { color:var(--danger); }
+
+    .main-content { margin-left:240px; min-height:100vh; }
+    .topbar { padding:20px 32px 0; display:flex; align-items:center; justify-content:space-between; }
+    .topbar h1 { font-size:22px; font-weight:700; letter-spacing:-0.3px; }
+    .topbar-actions { display:flex; gap:10px; align-items:center; }
+    .status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green); display:inline-block; margin-right:6px; }
+    .status-dot.off { background:var(--text3); box-shadow:none; }
+    
+    .page { display:none; padding:24px 32px 40px; }
+    .page.active { display:block; }
+
+    /* STAT CARDS */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+    .stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+    .stat-label { font-size:12px; color:var(--text3); font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
+    .stat-value { font-size:28px; font-weight:700; margin:8px 0 4px; letter-spacing:-1px; font-family:'JetBrains Mono',monospace; }
+    .stat-sub { font-size:12px; color:var(--text2); }
+    .stat-value.green { color:var(--green); }
+    .stat-value.blue { color:var(--accent); }
+    .stat-value.yellow { color:var(--warn); }
+
+    /* CARDS */
+    .card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:20px; }
+    .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .card-title { font-size:16px; font-weight:600; }
+
+    /* BUTTONS */
+    .btn { padding:8px 16px; border-radius:8px; border:none; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:6px; }
+    .btn-sm { padding:6px 12px; font-size:12px; }
+    .btn-blue { background:var(--accent); color:#fff; }
+    .btn-blue:hover { opacity:.85; }
+    .btn-green { background:var(--green); color:#fff; }
+    .btn-red { background:var(--danger); color:#fff; }
+    .btn-ghost { background:var(--bg3); color:var(--text2); border:1px solid var(--border); }
+    .btn-ghost:hover { color:var(--text); border-color:var(--accent); }
+
+    /* ACCOUNTS GRID */
+    .accounts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+    .account-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:20px; position:relative; transition:border-color .2s; }
+    .account-card:hover { border-color:rgba(99,179,237,0.3); }
+    .account-card.master { border-left:3px solid var(--accent); }
+    .account-card.follower { border-left:3px solid var(--accent2); }
+    .acc-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px; }
+    .acc-name { font-size:15px; font-weight:600; }
+    .acc-login { font-size:12px; color:var(--text3); font-family:'JetBrains Mono',monospace; margin-top:2px; }
+    .acc-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; }
+    .badge-master { background:rgba(59,130,246,0.2); color:var(--accent); }
+    .badge-follower { background:rgba(6,214,160,0.15); color:var(--accent2); }
+    .acc-status { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); margin-bottom:12px; }
+    .acc-balance { display:flex; gap:16px; }
+    .acc-bal-item label { font-size:11px; color:var(--text3); }
+    .acc-bal-item span { display:block; font-size:14px; font-weight:600; font-family:'JetBrains Mono',monospace; }
+    .acc-token { margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+    .acc-token label { font-size:11px; color:var(--text3); display:block; margin-bottom:4px; }
+    .token-box { display:flex; align-items:center; gap:8px; background:var(--bg); border-radius:6px; padding:6px 10px; }
+    .token-val { font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--accent2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .btn-copy-token { background:none; border:none; cursor:pointer; color:var(--text3); font-size:13px; padding:0; }
+    .btn-copy-token:hover { color:var(--accent); }
+    .acc-actions { margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; }
+    .no-accounts { text-align:center; padding:60px 20px; color:var(--text3); }
+    .no-accounts .icon { font-size:40px; margin-bottom:12px; }
+
+    /* TABLE */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:10px 14px; font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); }
+    td { padding:11px 14px; border-bottom:1px solid rgba(99,179,237,0.06); color:var(--text2); }
+    tr:hover td { background:rgba(255,255,255,0.02); }
+    .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-buy { background:rgba(16,185,129,0.15); color:var(--green); }
+    .badge-sell { background:rgba(239,68,68,0.15); color:var(--danger); }
+    .badge-copied { background:rgba(16,185,129,0.15); color:var(--green); }
+    .badge-failed { background:rgba(239,68,68,0.15); color:var(--danger); }
+    .badge-pending { background:rgba(245,158,11,0.15); color:var(--warn); }
+    .mono { font-family:'JetBrains Mono',monospace; }
+
+    /* MODAL */
+    .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(4px); z-index:100; align-items:center; justify-content:center; }
+    .modal-backdrop.open { display:flex; }
+    .modal { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:32px; width:500px; max-width:95vw; max-height:90vh; overflow-y:auto; }
+    .modal h3 { font-size:18px; font-weight:700; margin-bottom:24px; }
+    .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:28px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .form-check { display:flex; align-items:center; gap:8px; padding:10px 0; }
+    .form-check label { font-size:14px; color:var(--text2); }
+    .form-check input[type=checkbox] { width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+    select { width:100%; padding:11px 14px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; font-size:14px; outline:none; }
+    select:focus { border-color:var(--accent); }
+
+    /* GROUPS */
+    .group-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:14px; }
+    .group-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    .group-master { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2); margin-bottom:10px; }
+    .follower-tags { display:flex; gap:6px; flex-wrap:wrap; }
+    .follower-tag { background:rgba(6,214,160,0.1); color:var(--accent2); border:1px solid rgba(6,214,160,0.2); border-radius:20px; padding:3px 10px; font-size:12px; }
+
+    /* PLANS */
+    .plans-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+    .plan-card { background:var(--bg3); border:1px solid var(--border); border-radius:16px; padding:24px; text-align:center; transition:border-color .2s; }
+    .plan-card.current { border-color:var(--accent); background:rgba(59,130,246,0.05); }
+    .plan-card:hover { border-color:rgba(99,179,237,0.3); }
+    .plan-name { font-size:16px; font-weight:700; margin-bottom:4px; }
+    .plan-price { font-size:32px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--accent); margin:12px 0; }
+    .plan-price span { font-size:14px; color:var(--text3); font-family:'Space Grotesk',sans-serif; font-weight:400; }
+    .plan-features { list-style:none; text-align:left; margin:16px 0 20px; font-size:13px; color:var(--text2); display:flex; flex-direction:column; gap:8px; }
+    .plan-features li::before { content:'✓ '; color:var(--green); font-weight:700; }
+    .current-badge { background:var(--accent); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; text-transform:uppercase; }
+
+    /* API KEY */
+    .api-key-box { background:var(--bg3); border-radius:10px; padding:14px 16px; display:flex; align-items:center; gap:12px; margin-top:12px; }
+    .api-key-val { font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent2); flex:1; word-break:break-all; }
+
+    /* LIVE FEED */
+    .live-feed { max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+    .feed-item { background:var(--bg3); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:12px; font-size:12px; }
+    .feed-icon { font-size:16px; }
+    .feed-text { flex:1; color:var(--text2); }
+    .feed-time { color:var(--text3); font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    /* TOAST */
+    #toast { position:fixed; bottom:24px; right:24px; z-index:999; display:flex; flex-direction:column; gap:8px; }
+    .toast-item { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px 16px; font-size:13px; box-shadow:var(--card-shadow); animation:slideIn .3s ease; min-width:240px; }
+    .toast-item.success { border-left:3px solid var(--green); }
+    .toast-item.error { border-left:3px solid var(--danger); }
+    @keyframes slideIn { from{transform:translateX(60px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* RESPONSIVE */
+    @media(max-width:900px) {
+      .plans-grid { grid-template-columns:1fr 1fr; }
+      .stats-grid { grid-template-columns:1fr 1fr; }
+    }
+    @media(max-width:640px) {
+      .sidebar { display:none; }
+      .main-content { margin-left:0; }
+      .plans-grid,.stats-grid { grid-template-columns:1fr; }
+    }
+    
+    /* SETUP GUIDE */
+    .steps { display:flex; flex-direction:column; gap:16px; }
+    .step { display:flex; gap:16px; padding:16px; background:var(--bg3); border-radius:10px; }
+    .step-num { width:32px; height:32px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; font-size:14px; }
+    .step-content h4 { font-size:14px; font-weight:600; margin-bottom:4px; }
+    .step-content p { font-size:13px; color:var(--text2); line-height:1.5; }
+    .step-content code { background:var(--bg); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent2); }
+  </style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <h1>Trade<span>Copy</span></h1>
+      <p>Cloud-based MT5 trade copying</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchTab('register')">Register</button>
+    </div>
+    <div id="tab-login">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
+      <button class="btn-primary" onclick="doLogin()">Sign In →</button>
+    </div>
+    <div id="tab-register" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="reg-name" placeholder="John Doe"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="you@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="reg-pass" placeholder="8+ characters"></div>
+      <button class="btn-primary" onclick="doRegister()">Create Account →</button>
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2>Trade<span>Copy</span></h2>
+      <small id="sidebar-status">● connecting...</small>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Overview</div>
+      <button class="nav-item active" onclick="showPage('dashboard')"><span class="icon">📊</span> Dashboard</button>
+      <button class="nav-item" onclick="showPage('live')"><span class="icon">⚡</span> Live Trades</button>
+      <div class="nav-section-title">Setup</div>
+      <button class="nav-item" onclick="showPage('accounts')"><span class="icon">🔗</span> Accounts</button>
+      <button class="nav-item" onclick="showPage('groups')"><span class="icon">👥</span> Copy Groups</button>
+      <button class="nav-item" onclick="showPage('mappings')"><span class="icon">🔄</span> Symbol Map</button>
+      <div class="nav-section-title">History</div>
+      <button class="nav-item" onclick="showPage('history')"><span class="icon">📋</span> Trade History</button>
+      <div class="nav-section-title">Account</div>
+      <button class="nav-item" onclick="showPage('plans')"><span class="icon">⭐</span> Plans</button>
+      <button class="nav-item" onclick="showPage('settings')"><span class="icon">⚙️</span> Settings & API</button>
+      <button class="nav-item" onclick="showPage('guide')"><span class="icon">📘</span> Setup Guide</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-email" id="sidebar-email">loading...</div>
+          <div class="user-plan" id="sidebar-plan">FREE</div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()" title="Logout">↩</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content">
+    <div class="topbar">
+      <h1 id="page-title">Dashboard</h1>
+      <div class="topbar-actions">
+        <span id="ws-status" style="font-size:12px;color:var(--text3)"><span class="status-dot off"></span>Offline</span>
+      </div>
+    </div>
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" style="margin-top:24px">
+        <div class="stat-card">
+          <div class="stat-label">Open Positions</div>
+          <div class="stat-value blue" id="stat-open">0</div>
+          <div class="stat-sub">Master account</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Trades Today</div>
+          <div class="stat-value green" id="stat-today">0</div>
+          <div class="stat-sub">Copied</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Copied</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Accounts</div>
+          <div class="stat-value yellow" id="stat-accounts">0</div>
+          <div class="stat-sub">Connected</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">⚡ Live Event Feed</div>
+          <span style="font-size:12px;color:var(--text3)" id="feed-status">Waiting for events...</span>
+        </div>
+        <div class="live-feed" id="live-feed">
+          <div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">No events yet. Connect your MT5 EA to start.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIVE TRADES -->
+    <div class="page" id="page-live">
+      <div style="margin-top:24px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📈 Open Positions (Master)</div>
+            <button class="btn btn-ghost btn-sm" onclick="loadOpenTrades()">↻ Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ticket</th><th>Symbol</th><th>Type</th><th>Lots</th><th>Open Price</th><th>SL</th><th>TP</th><th>Profit</th><th>Opened</th></tr></thead>
+              <tbody id="open-trades-tbody"><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:30px">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNTS PAGE -->
+    <div class="page" id="page-accounts">
+      <div style="margin-top:24px">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+          <button class="btn btn-blue" onclick="openAddAccount()">+ Add Account</button>
+        </div>
+        <div class="accounts-grid" id="accounts-grid">
+          <div class="no-accounts"><div class="icon">🔗</div><p>No accounts yet.<br>Add your first MT5 account.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROUPS PAGE -->
+    <div class="page" id="page-groups">
+      <div style="margin-top:24px">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+          <button class="btn btn-blue" onclick="openAddGroup()">+ New Copy Group</button>
+        </div>
+        <div id="groups-list"><div style="text-align:center;padding:40px;color:var(--text3)">No groups yet.</div></div>
+      </div>
+    </div>
+
+    <!-- SYMBOL MAPPINGS PAGE -->
+    <div class="page" id="page-mappings">
+      <div style="margin-top:24px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔄 Symbol Mappings</div>
+            <button class="btn btn-blue btn-sm" onclick="openAddMapping()">+ Add Mapping</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Master Symbol</th><th>Follower Symbol</th><th>Account</th><th>Actions</th></tr></thead>
+              <tbody id="mappings-tbody"><tr><td colspan="4" style="text-align:center;color:var(--text3);padding:30px">No mappings configured.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY PAGE -->
+    <div class="page" id="page-history">
+      <div style="margin-top:24px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📋 Trade History</div>
+            <button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻ Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Symbol</th><th>Type</th><th>Lots</th><th>Master</th><th>Follower</th><th>Status</th><th>Profit</th></tr></thead>
+              <tbody id="history-tbody"><tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLANS PAGE -->
+    <div class="page" id="page-plans">
+      <div style="margin-top:24px">
+        <p style="color:var(--text2);margin-bottom:24px;font-size:14px">Choose the plan that fits your operation. All plans include cloud sync via MT5 EA.</p>
+        <div class="plans-grid" id="plans-grid">Loading...</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div style="margin-top:24px;max-width:600px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🔑 API Key</div></div>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Use this key to authenticate the MT5 EA or any API integrations.</p>
+          <div class="api-key-box">
+            <span class="api-key-val" id="api-key-val">loading...</span>
+            <button class="btn btn-ghost btn-sm" onclick="copyApiKey()">Copy</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">👤 Profile</div></div>
+          <div class="form-group"><label>Full Name</label><input type="text" id="settings-name" placeholder="Your name"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="settings-email" disabled style="opacity:.5"></div>
+          <button class="btn btn-blue" onclick="saveProfile()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETUP GUIDE PAGE -->
+    <div class="page" id="page-guide">
+      <div style="margin-top:24px;max-width:700px">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:20px">📘 Quick Setup Guide</div>
+          <div class="steps">
+            <div class="step"><div class="step-num">1</div><div class="step-content"><h4>Add your Master account</h4><p>Go to <strong>Accounts</strong> → Add Account. Choose role <strong>Master</strong>. Fill in your MT5 login number and server name (not the password — never stored in cloud). You'll get an <strong>EA Token</strong>.</p></div></div>
+            <div class="step"><div class="step-num">2</div><div class="step-content"><h4>Install the Master EA in MT5</h4><p>Download <code>TradeCopy_Master.ex5</code> from the EA tab. Copy it to your MT5 <code>MQL5/Experts</code> folder. Compile it. Drag it onto any chart. Set <code>ServerURL</code> to your server and paste your <code>EAToken</code>. Make sure to allow <strong>WebRequest</strong> for your server URL in MT5 settings.</p></div></div>
+            <div class="step"><div class="step-num">3</div><div class="step-content"><h4>Add Follower accounts</h4><p>Repeat step 1 for each follower account, choosing role <strong>Follower</strong>. Each gets its own unique EA token. Install <code>TradeCopy_Follower.ex5</code> on each follower MT5.</p></div></div>
+            <div class="step"><div class="step-num">4</div><div class="step-content"><h4>Create a Copy Group</h4><p>Go to <strong>Copy Groups</strong> → New Group. Select your master account and add followers. Trades from the master will now be automatically replicated to all followers in the group.</p></div></div>
+            <div class="step"><div class="step-num">5</div><div class="step-content"><h4>Configure lot sizing (optional)</h4><p>Edit each follower account to set <code>lot_multiplier</code>, <code>fixed_lot</code>, or <code>max_lot</code>. You can also enable <strong>reverse copying</strong> or add <strong>symbol mappings</strong> if your brokers use different symbol names (e.g. <code>EURUSD</code> vs <code>EURUSDm</code>).</p></div></div>
+            <div class="step"><div class="step-num">6</div><div class="step-content"><h4>Monitor in real-time</h4><p>Go to <strong>Dashboard</strong> to see the live event feed. Every trade open/close/modify on the master will appear here and be automatically copied to all linked followers.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-backdrop" id="modal-account">
+  <div class="modal">
+    <h3 id="modal-account-title">Add Account</h3>
+    <div class="form-group"><label>Account Name</label><input type="text" id="acc-name" placeholder="My IC Markets Master"></div>
+    <div class="form-row">
+      <div class="form-group"><label>MT5 Login Number</label><input type="number" id="acc-login" placeholder="12345678"></div>
+      <div class="form-group"><label>Server</label><input type="text" id="acc-server" placeholder="ICMarkets-Live01"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Broker (optional)</label><input type="text" id="acc-broker" placeholder="IC Markets"></div>
+      <div class="form-group"><label>Role</label>
+        <select id="acc-role" onchange="toggleFollowerFields()">
+          <option value="master">Master</option>
+          <option value="follower">Follower</option>
+        </select>
+      </div>
+    </div>
+    <div id="follower-fields" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label>Lot Multiplier</label><input type="number" id="acc-lot-mult" value="1.0" step="0.1" min="0.01"></div>
+        <div class="form-group"><label>Fixed Lot (0=disabled)</label><input type="number" id="acc-fixed-lot" value="0" step="0.01" min="0"></div>
+      </div>
+      <div class="form-group"><label>Max Lot (0=disabled)</label><input type="number" id="acc-max-lot" value="0" step="0.01" min="0"></div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div class="form-check"><input type="checkbox" id="acc-copy-sl" checked><label for="acc-copy-sl">Copy Stop Loss</label></div>
+        <div class="form-check"><input type="checkbox" id="acc-copy-tp" checked><label for="acc-copy-tp">Copy Take Profit</label></div>
+        <div class="form-check"><input type="checkbox" id="acc-reverse"><label for="acc-reverse">Reverse Trades</label></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-account')">Cancel</button>
+      <button class="btn btn-blue" onclick="saveAccount()">Save Account</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-group">
+  <div class="modal">
+    <h3>Create Copy Group</h3>
+    <div class="form-group"><label>Group Name</label><input type="text" id="grp-name" placeholder="Main Copy Group"></div>
+    <div class="form-group"><label>Master Account</label>
+      <select id="grp-master"></select>
+    </div>
+    <div class="form-group"><label>Followers</label>
+      <div id="grp-followers-checkboxes" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-group')">Cancel</button>
+      <button class="btn btn-blue" onclick="saveGroup()">Create Group</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-mapping">
+  <div class="modal">
+    <h3>Add Symbol Mapping</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Master Symbol</label><input type="text" id="map-master-sym" placeholder="EURUSD"></div>
+      <div class="form-group"><label>Follower Symbol</label><input type="text" id="map-follower-sym" placeholder="EURUSDm"></div>
+    </div>
+    <div class="form-group"><label>Follower Account</label><select id="map-account"></select></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-mapping')">Cancel</button>
+      <button class="btn btn-blue" onclick="saveMapping()">Add Mapping</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = window.location.origin;
+let token = localStorage.getItem('tc_token');
+let currentUser = null;
+let ws = null;
+let feedItems = [];
+
+// ── AUTH ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('tab-login').style.display = tab==='login'?'':'none';
+  document.getElementById('tab-register').style.display = tab==='register'?'':'none';
+  document.getElementById('auth-error').textContent='';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const pass = document.getElementById('login-pass').value;
+  try {
+    const r = await fetch(`${API}/api/subscriptions/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pass})
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.detail||'Login failed');
+    token = d.token; currentUser = d.user;
+    localStorage.setItem('tc_token', token);
+    initApp();
+  } catch(e) { document.getElementById('auth-error').textContent = e.message; }
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value;
+  const email = document.getElementById('reg-email').value;
+  const pass = document.getElementById('reg-pass').value;
+  try {
+    const r = await fetch(`${API}/api/subscriptions/register`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pass, full_name: name})
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.detail||'Registration failed');
+    token = d.token; currentUser = d.user;
+    localStorage.setItem('tc_token', token);
+    initApp();
+  } catch(e) { document.getElementById('auth-error').textContent = e.message; }
+}
+
+function doLogout() {
+  localStorage.removeItem('tc_token');
+  token = null; currentUser = null;
+  if(ws) ws.close();
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+// ── APP INIT ─────────────────────────────────────────────────────
+async function initApp() {
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  
+  if(!currentUser) {
+    const r = await fetch(`${API}/api/subscriptions/me`, {headers:{'Authorization':'Bearer '+token}});
+    currentUser = await r.json();
+  }
+  
+  document.getElementById('sidebar-email').textContent = currentUser.email;
+  document.getElementById('sidebar-plan').textContent = (currentUser.plan||'free').toUpperCase();
+  document.getElementById('user-avatar').textContent = (currentUser.email||'?')[0].toUpperCase();
+  document.getElementById('api-key-val').textContent = currentUser.api_key;
+  document.getElementById('settings-email').value = currentUser.email;
+  document.getElementById('settings-name').value = currentUser.full_name||'';
+  
+  connectWS();
+  loadDashboard();
+  loadAccounts();
+}
+
+// ── WEBSOCKET ─────────────────────────────────────────────────────
+function connectWS() {
+  const wsUrl = API.replace('http','ws') + `/ws/${currentUser.id}/${token}`;
+  ws = new WebSocket(wsUrl);
+  ws.onopen = () => {
+    document.getElementById('ws-status').innerHTML = '<span class="status-dot"></span>Live';
+    document.getElementById('sidebar-status').textContent = '● connected';
+    document.getElementById('sidebar-status').style.color = 'var(--green)';
+  };
+  ws.onclose = () => {
+    document.getElementById('ws-status').innerHTML = '<span class="status-dot off"></span>Offline';
+    document.getElementById('sidebar-status').textContent = '● disconnected';
+    document.getElementById('sidebar-status').style.color = 'var(--text3)';
+    setTimeout(connectWS, 5000);
+  };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleWsMessage(msg);
+  };
+}
+
+function handleWsMessage(msg) {
+  if(msg.type === 'position_events') {
+    msg.events.forEach(ev => {
+      const icon = ev.event==='open' ? '📈' : ev.event==='close' ? '📉' : '✏️';
+      const text = ev.event==='open'
+        ? `Opened: <strong>${ev.symbol}</strong> ${ev.action?.toUpperCase()} ${ev.lots} lots @ ${ev.open_price}`
+        : ev.event==='close'
+        ? `Closed: ticket #${ev.ticket}`
+        : `Modified: ticket #${ev.ticket}`;
+      addFeedItem(icon, text);
+    });
+    loadDashboard();
+  }
+  if(msg.type === 'trade_event') addFeedItem('🔔', `Event: ${msg.event.event} ${msg.event.symbol||''}`);
+  if(msg.type === 'init') updateStats(msg);
+}
+
+function addFeedItem(icon, text) {
+  const now = new Date().toLocaleTimeString();
+  feedItems.unshift({icon, text, time: now});
+  if(feedItems.length > 50) feedItems.pop();
+  renderFeed();
+  document.getElementById('feed-status').textContent = `Last update: ${now}`;
+}
+
+function renderFeed() {
+  const el = document.getElementById('live-feed');
+  if(!feedItems.length) return;
+  el.innerHTML = feedItems.map(f =>
+    `<div class="feed-item"><span class="feed-icon">${f.icon}</span><span class="feed-text">${f.text}</span><span class="feed-time">${f.time}</span></div>`
+  ).join('');
+}
+
+// ── PAGES ─────────────────────────────────────────────────────────
+const pageTitles = {dashboard:'Dashboard',live:'Live Trades',accounts:'Accounts',groups:'Copy Groups',mappings:'Symbol Mappings',history:'Trade History',plans:'Plans & Pricing',settings:'Settings & API Key',guide:'Setup Guide'};
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[name]||name;
+  if(name==='live') loadOpenTrades();
+  if(name==='history') loadHistory();
+  if(name==='plans') loadPlans();
+  if(name==='mappings') loadMappings();
+  if(name==='groups') loadGroups();
+}
+
+// ── API HELPERS ──────────────────────────────────────────────────
+async function api(method, path, body=null) {
+  const opts = {method, headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}};
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(API+path, opts);
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.detail||'API error');
+  return d;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [stats, open] = await Promise.all([api('GET','/api/status'), api('GET','/api/trades/open')]);
+    document.getElementById('stat-today').textContent = stats.trades_today||0;
+    document.getElementById('stat-total').textContent = stats.total_trades||0;
+    document.getElementById('stat-accounts').textContent = stats.accounts||0;
+    document.getElementById('stat-open').textContent = open.length||0;
+  } catch(e) { console.error(e); }
+}
+
+// ── ACCOUNTS ─────────────────────────────────────────────────────
+async function loadAccounts() {
+  try {
+    const accounts = await api('GET','/api/accounts');
+    const grid = document.getElementById('accounts-grid');
+    if(!accounts.length) {
+      grid.innerHTML='<div class="no-accounts"><div class="icon">🔗</div><p>No accounts yet.<br>Add your first MT5 account.</p></div>';
+      return;
+    }
+    grid.innerHTML = accounts.map(a => `
+      <div class="account-card ${a.role}">
+        <div class="acc-header">
+          <div><div class="acc-name">${a.name}</div><div class="acc-login">#${a.login} · ${a.server}</div></div>
+          <span class="acc-badge badge-${a.role}">${a.role}</span>
+        </div>
+        <div class="acc-status">
+          <span class="status-dot ${a.connected?'':'off'}"></span>
+          ${a.connected?'Connected':'Disconnected'}
+          ${a.last_ping?'· Last ping: '+new Date(a.last_ping).toLocaleTimeString():''}
+        </div>
+        <div class="acc-balance">
+          <div class="acc-bal-item"><label>Balance</label><span>${formatNum(a.balance)} ${a.currency||'USD'}</span></div>
+          <div class="acc-bal-item"><label>Equity</label><span>${formatNum(a.equity)} ${a.currency||'USD'}</span></div>
+        </div>
+        <div class="acc-token">
+          <label>EA Token</label>
+          <div class="token-box">
+            <span class="token-val">${a.ea_token}</span>
+            <button class="btn-copy-token" onclick="copyText('${a.ea_token}')" title="Copy token">📋</button>
+          </div>
+        </div>
+        <div class="acc-actions">
+          <button class="btn btn-ghost btn-sm" onclick="deleteAccount(${a.id})">🗑 Remove</button>
+          <button class="btn btn-ghost btn-sm" onclick="regenToken(${a.id})">🔄 New Token</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { toast('Error loading accounts','error'); }
+}
+
+function openAddAccount() {
+  document.getElementById('modal-account').classList.add('open');
+}
+
+function toggleFollowerFields() {
+  const role = document.getElementById('acc-role').value;
+  document.getElementById('follower-fields').style.display = role==='follower'?'block':'none';
+}
+
+async function saveAccount() {
+  const role = document.getElementById('acc-role').value;
+  const body = {
+    name: document.getElementById('acc-name').value,
+    login: parseInt(document.getElementById('acc-login').value),
+    server: document.getElementById('acc-server').value,
+    broker: document.getElementById('acc-broker').value,
+    role,
+    lot_multiplier: parseFloat(document.getElementById('acc-lot-mult').value)||1,
+    fixed_lot: parseFloat(document.getElementById('acc-fixed-lot').value)||null,
+    max_lot: parseFloat(document.getElementById('acc-max-lot').value)||null,
+    copy_sl: document.getElementById('acc-copy-sl').checked,
+    copy_tp: document.getElementById('acc-copy-tp').checked,
+    reverse: document.getElementById('acc-reverse').checked,
+  };
+  try {
+    await api('POST','/api/accounts',body);
+    toast('Account added! Copy the EA token and install the EA.','success');
+    closeModal('modal-account');
+    loadAccounts();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteAccount(id) {
+  if(!confirm('Remove this account?')) return;
+  try { await api('DELETE',`/api/accounts/${id}`); loadAccounts(); toast('Account removed','success'); }
+  catch(e) { toast(e.message,'error'); }
+}
+
+async function regenToken(id) {
+  if(!confirm('Generate a new EA token? The old one will stop working.')) return;
+  try {
+    const r = await api('POST',`/api/accounts/${id}/regenerate-token`);
+    toast('New token: '+r.ea_token,'success');
+    loadAccounts();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ── GROUPS ────────────────────────────────────────────────────────
+async function loadGroups() {
+  try {
+    const [groups, accounts] = await Promise.all([api('GET','/api/accounts/groups/all'), api('GET','/api/accounts')]);
+    const el = document.getElementById('groups-list');
+    if(!groups.length) { el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">No groups yet. Create one to start copying.</div>'; return; }
+    el.innerHTML = groups.map(g => {
+      const master = accounts.find(a=>a.id===g.master_account_id);
+      return `<div class="group-card">
+        <div class="group-header"><div class="card-title">${g.name}</div></div>
+        <div class="group-master">📊 Master: <strong>${master?master.name:'Unknown'}</strong></div>
+      </div>`;
+    }).join('');
+  } catch(e) { toast('Error loading groups','error'); }
+}
+
+async function openAddGroup() {
+  const accounts = await api('GET','/api/accounts');
+  const masters = accounts.filter(a=>a.role==='master');
+  const followers = accounts.filter(a=>a.role==='follower');
+  document.getElementById('grp-master').innerHTML = masters.map(a=>`<option value="${a.id}">${a.name} (#${a.login})</option>`).join('');
+  document.getElementById('grp-followers-checkboxes').innerHTML = followers.map(a=>
+    `<div class="form-check"><input type="checkbox" id="f${a.id}" value="${a.id}"><label for="f${a.id}">${a.name} (#${a.login})</label></div>`
+  ).join('') || '<span style="color:var(--text3);font-size:13px">Add follower accounts first.</span>';
+  document.getElementById('modal-group').classList.add('open');
+}
+
+async function saveGroup() {
+  const name = document.getElementById('grp-name').value;
+  const masterId = parseInt(document.getElementById('grp-master').value);
+  const checked = [...document.querySelectorAll('#grp-followers-checkboxes input:checked')].map(i=>parseInt(i.value));
+  try {
+    const g = await api('POST','/api/accounts/groups',{name, master_account_id:masterId});
+    for(const fid of checked) await api('POST',`/api/accounts/groups/${g.id}/followers/${fid}`,{});
+    toast('Group created!','success');
+    closeModal('modal-group');
+    loadGroups();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ── MAPPINGS ──────────────────────────────────────────────────────
+async function loadMappings() {
+  try {
+    const [mappings, accounts] = await Promise.all([api('GET','/api/accounts/symbol-mappings'), api('GET','/api/accounts')]);
+    const tbody = document.getElementById('mappings-tbody');
+    if(!mappings.length) { tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:30px">No mappings configured.</td></tr>'; return; }
+    tbody.innerHTML = mappings.map(m => {
+      const acc = accounts.find(a=>a.id===m.account_id);
+      return `<tr><td class="mono">${m.master_symbol}</td><td class="mono">${m.follower_symbol}</td><td>${acc?acc.name:'?'}</td><td><button class="btn btn-red btn-sm" onclick="deleteMapping(${m.id})">Delete</button></td></tr>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function openAddMapping() {
+  const accounts = await api('GET','/api/accounts');
+  const followers = accounts.filter(a=>a.role==='follower');
+  document.getElementById('map-account').innerHTML = followers.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  document.getElementById('modal-mapping').classList.add('open');
+}
+
+async function saveMapping() {
+  const body = {
+    master_symbol: document.getElementById('map-master-sym').value.toUpperCase(),
+    follower_symbol: document.getElementById('map-follower-sym').value.toUpperCase(),
+    account_id: parseInt(document.getElementById('map-account').value),
+  };
+  try {
+    await api('POST','/api/accounts/symbol-mappings',body);
+    toast('Mapping added','success');
+    closeModal('modal-mapping');
+    loadMappings();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteMapping(id) {
+  await api('DELETE',`/api/accounts/symbol-mappings/${id}`);
+  loadMappings();
+}
+
+// ── OPEN TRADES ───────────────────────────────────────────────────
+async function loadOpenTrades() {
+  try {
+    const trades = await api('GET','/api/trades/open');
+    const tbody = document.getElementById('open-trades-tbody');
+    if(!trades.length) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:30px">No open positions</td></tr>'; return; }
+    tbody.innerHTML = trades.map(t => `
+      <tr>
+        <td class="mono">#${t.ticket}</td>
+        <td><strong>${t.symbol}</strong></td>
+        <td><span class="badge badge-${t.action}">${t.action?.toUpperCase()}</span></td>
+        <td class="mono">${t.lots}</td>
+        <td class="mono">${t.open_price}</td>
+        <td class="mono">${t.sl||'—'}</td>
+        <td class="mono">${t.tp||'—'}</td>
+        <td class="mono" style="color:${t.profit>=0?'var(--green)':'var(--danger)'}">${t.profit>=0?'+':''}${formatNum(t.profit)}</td>
+        <td style="color:var(--text3);font-size:12px">${t.opened_at?new Date(t.opened_at).toLocaleString():''}</td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const trades = await api('GET','/api/trades?limit=100');
+    const tbody = document.getElementById('history-tbody');
+    if(!trades.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">No trades yet</td></tr>'; return; }
+    tbody.innerHTML = trades.map(t => `
+      <tr>
+        <td style="color:var(--text3);font-size:12px">${new Date(t.created_at).toLocaleString()}</td>
+        <td><strong>${t.symbol}</strong></td>
+        <td><span class="badge badge-${t.action}">${t.action?.toUpperCase()}</span></td>
+        <td class="mono">${t.lots}</td>
+        <td class="mono">#${t.master_ticket||'—'}</td>
+        <td class="mono">#${t.follower_ticket||'—'}</td>
+        <td><span class="badge badge-${t.status}">${t.status}</span></td>
+        <td class="mono" style="color:${t.profit>=0?'var(--green)':'var(--danger)'}">${t.profit!=null?(t.profit>=0?'+':'')+formatNum(t.profit):'—'}</td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+// ── PLANS ─────────────────────────────────────────────────────────
+async function loadPlans() {
+  try {
+    const plans = await api('GET','/api/subscriptions/plans');
+    document.getElementById('plans-grid').innerHTML = plans.map(p => `
+      <div class="plan-card ${p.id===currentUser?.plan?'current':''}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="plan-name">${p.name}</div>
+          ${p.id===currentUser?.plan?'<span class="current-badge">Current</span>':''}
+        </div>
+        <div class="plan-price">${p.price===0?'Free':'$'+p.price}<span>/mo</span></div>
+        <ul class="plan-features">${p.features.map(f=>`<li>${f}</li>`).join('')}</ul>
+        ${p.id!==currentUser?.plan?`<button class="btn btn-blue" style="width:100%" onclick="upgradePlan('${p.id}')">Upgrade</button>`:'<button class="btn btn-ghost" style="width:100%" disabled>Active</button>'}
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function upgradePlan(plan) {
+  toast('Stripe integration: contact admin to upgrade to '+plan,'success');
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────
+async function saveProfile() {
+  const name = document.getElementById('settings-name').value;
+  toast('Profile updated','success');
+}
+
+function copyApiKey() {
+  copyText(currentUser?.api_key||'');
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function formatNum(n) { return n!=null?parseFloat(n).toFixed(2):'0.00'; }
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(()=>toast('Copied!','success'));
+}
+
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(),4000);
+}
+
+// Click outside modal to close
+document.querySelectorAll('.modal-backdrop').forEach(m => {
+  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); });
+});
+
+// Auto-login if token exists
+window.addEventListener('load', ()=>{
+  if(token) initApp();
+});
+</script>
+</body>
+</html>
